@@ -132,27 +132,31 @@ def with_init(attrs, defaults=None):
     if defaults is None:
         defaults = {}
 
-    def init(self, *args, **kw):
-        try:
-            exec_(setters, {}, {"self": self, "kw": kw, "defaults": defaults})
-        except KeyError as e:
-            raise ValueError(
-                "Missing keyword value for '{0}'.".format(e.args[0])
-            )
-
-        self.__original_init__(*args, **kw)
-
     def wrap(cl):
         cl.__original_init__ = cl.__init__
         cl.__init__ = init
         return cl
 
-    setters = compile("\n".join(
-        "self.{0} = kw.pop('{0}'{1})".format(
+    script = """\
+def init(self, *args, **kw):
+    try:
+{setters}
+    except KeyError as e:
+        raise ValueError(
+            "Missing keyword value for '%s'." % (e.args[0],)
+        )
+
+    self.__original_init__(*args, **kw)
+""".format(setters="\n".join(
+        "       self.{0} = kw.pop('{0}'{1})".format(
             a,
             ", defaults['{0}']".format(a) if a in defaults else ""
         ) for a in attrs
-    ), "<string>", "exec")
+    ))
+
+    locs = {}
+    exec_(script, {"defaults": defaults}, locs)
+    init = locs["init"]
 
     return wrap
 
