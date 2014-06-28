@@ -147,16 +147,12 @@ def with_init(attrs, defaults=None):
         cl.__init__ = init
         return cl
 
-    setter_lines = []
-    for a in attrs:
-        setter_lines.append(
-            "self.{0} = kw.pop('{0}'{1})".format(
-                a,
-                ", defaults['{0}']".format(a) if a in defaults else ""
-            )
-        )
-
-    setters = compile("\n".join(setter_lines), "<string>", "exec")
+    setters = compile("\n".join(
+        "self.{0} = kw.pop('{0}'{1})".format(
+            a,
+            ", defaults['{0}']".format(a) if a in defaults else ""
+        ) for a in attrs
+    ), "<string>", "exec")
 
     return wrap
 
