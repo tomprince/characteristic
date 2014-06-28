@@ -139,6 +139,9 @@ def with_init(attrs, defaults=None):
 
     script = """\
 def init(self, *args, **kw):
+    '''
+    Automatically created initializer by characteristic.
+    '''
     try:
 {setters}
     except KeyError as e:
