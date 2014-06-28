@@ -10,6 +10,16 @@ __author__ = "Hynek Schlawack"
 __license__ = "MIT"
 __copyright__ = "Copyright 2014 Hynek Schlawack"
 
+import sys
+
+
+if sys.version_info[0] == 2:
+    def exec_(code, locals_, globals_):
+        exec("exec code in locals_, globals_")
+else:  # pragma: no cover
+    def exec_(code, locals_, globals_):
+        exec(code, locals_, globals_)
+
 
 def with_cmp(attrs):
     """
@@ -124,12 +134,7 @@ def with_init(attrs, defaults=None):
 
     def init(self, *args, **kw):
         try:
-            for a in attrs:
-                if a in defaults:
-                    v = kw.pop(a, defaults[a])
-                else:
-                    v = kw.pop(a)
-                setattr(self, a, v)
+            exec_(setters, {}, {"self": self, "kw": kw, "defaults": defaults})
         except KeyError as e:
             raise ValueError(
                 "Missing keyword value for '{0}'.".format(e.args[0])
@@ -141,6 +146,17 @@ def with_init(attrs, defaults=None):
         cl.__original_init__ = cl.__init__
         cl.__init__ = init
         return cl
+
+    setter_lines = []
+    for a in attrs:
+        setter_lines.append(
+            "self.{0} = kw.pop('{0}'{1})".format(
+                a,
+                ", defaults['{0}']".format(a) if a in defaults else ""
+            )
+        )
+
+    setters = compile("\n".join(setter_lines), "<string>", "exec")
 
     return wrap
 
